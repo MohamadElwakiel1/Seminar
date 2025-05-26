@@ -1,0 +1,407 @@
+﻿@using System.Text.Json
+@model SeminarMvcApp.Models.ExcelViewModel
+@{
+    ViewData["Title"] = "Home Page";
+}
+<ul class="nav nav-tabs mb-4" id="mainTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(ViewBag.ActiveTab == "budget" ? "" : "active")" id="excel-tab" data-bs-toggle="tab" data-bs-target="#excel" type="button" role="tab" aria-controls="excel" aria-selected="@(ViewBag.ActiveTab == "budget" ? "false" : "true")">Excel Upload & Analytics</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(ViewBag.ActiveTab == "budget" ? "active" : "")" id="budget-tab" data-bs-toggle="tab" data-bs-target="#budget" type="button" role="tab" aria-controls="budget" aria-selected="@(ViewBag.ActiveTab == "budget" ? "true" : "false")">Budget Optimization</button>
+    </li>
+</ul>
+<div class="tab-content" id="mainTabContent">
+    <div class="tab-pane fade @(ViewBag.ActiveTab == "budget" ? "" : "show active")" id="excel" role="tabpanel" aria-labelledby="excel-tab">
+        <div class="container py-5">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body">
+                            <h2 class="mb-4 text-center">Upload Excel File</h2>
+                            <form asp-action="Index" method="post" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <input class="form-control" type="file" name="excelFile" accept=".xlsx" required />
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-lg">Upload & Display</button>
+                                </div>
+                            </form>
+                            @if (ViewBag.Error != null)
+                            {
+                                <div class="alert alert-danger mt-3">@ViewBag.Error</div>
+                            }
+                        </div>
+                    </div>
+                    @if (Model != null && Model.Headers.Count > 0)
+                    {
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-body">
+                                <h4 class="mb-3">Excel Data</h4>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover align-middle">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                @foreach (var header in Model.Headers)
+                                                {
+                                                    <th>@header</th>
+                                                }
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var row in Model.Rows)
+                                            {
+                                                <tr>
+                                                    @foreach (var cell in row)
+                                                    {
+                                                        <td>@cell</td>
+                                                    }
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-4 text-center">
+                                    <form asp-action="Analytics" method="post">
+                                        <input type="hidden" name="excelData" value='@Html.Raw(JsonSerializer.Serialize(Model))' />
+                                        <button type="submit" class="btn btn-success btn-lg">Show Analytics</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    @if (Model != null && Model.Analytics != null && Model.Analytics.Count > 0)
+                    {
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-body">
+                                <h4 class="mb-3">Column Analytics</h4>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-striped align-middle">
+                                        <thead class="table-secondary">
+                                            <tr>
+                                                <th>Column</th>
+                                                <th>Count</th>
+                                                <th>Sum</th>
+                                                <th>Average</th>
+                                                <th>Min</th>
+                                                <th>Max</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var col in Model.Analytics)
+                                            {
+                                                <tr>
+                                                    <td>@col.Header</td>
+                                                    <td>@col.Count</td>
+                                                    <td>@(col.Sum?.ToString("N2") ?? "-")</td>
+                                                    <td>@(col.Average?.ToString("N2") ?? "-")</td>
+                                                    <td>@(col.Min?.ToString("N2") ?? "-")</td>
+                                                    <td>@(col.Max?.ToString("N2") ?? "-")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-4">
+                                    <canvas id="analyticsChart" height="120"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                        <script>
+                            const analytics = @Html.Raw(JsonSerializer.Serialize(Model.Analytics));
+                            const ctx = document.getElementById('analyticsChart').getContext('2d');
+                            const labels = analytics.map(a => a.Header);
+                            const avgData = analytics.map(a => a.Average ?? null);
+                            const minData = analytics.map(a => a.Min ?? null);
+                            const maxData = analytics.map(a => a.Max ?? null);
+                            new Chart(ctx, {
+                                type: 'bar',
+                                data: {
+                                    labels: labels,
+                                    datasets: [
+                                        {
+                                            label: 'Average',
+                                            data: avgData,
+                                            backgroundColor: 'rgba(54, 162, 235, 0.6)'
+                                        },
+                                        {
+                                            label: 'Min',
+                                            data: minData,
+                                            backgroundColor: 'rgba(75, 192, 192, 0.4)'
+                                        },
+                                        {
+                                            label: 'Max',
+                                            data: maxData,
+                                            backgroundColor: 'rgba(255, 99, 132, 0.4)'
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    plugins: {
+                                        legend: { position: 'top' },
+                                        title: { display: true, text: 'Column Analytics (Numeric Columns)' }
+                                    }
+                                }
+                            });
+                        </script>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade @(ViewBag.ActiveTab == "budget" ? "show active" : "")" id="budget" role="tabpanel" aria-labelledby="budget-tab">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="mb-4 text-center">Budget Optimization</h2>
+                <div class="mb-3 row">
+                    <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="Choose the unit for your input values (e.g., 1 Billion = 1,000,000,000)">Input Unit:</label>
+                    <div class="col-sm-8">
+                        <select class="form-select" name="InputUnit" id="InputUnit">
+                            @{
+                                var inputUnit = ViewBag.BudgetForm != null && ViewBag.BudgetForm.InputUnit != null ? (string)ViewBag.BudgetForm.InputUnit : "billion";
+                            }
+                            <option value="billion" selected="@(inputUnit == "billion" ? "selected" : null)">Billion</option>
+                            <option value="trillion" selected="@(inputUnit == "trillion" ? "selected" : null)">Trillion</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="alert alert-secondary mb-4">
+                    <strong>Why these constraints?</strong><br />
+                    The sector allocation constraints reflect typical policy priorities and historical spending patterns. They ensure a balanced budget that supports essential services (like education and health), infrastructure, and government operations, while preventing over- or under-investment in any one area. These ranges are based on international best practices and local economic realities.
+                </div>
+                <form asp-action="OptimizeBudget" method="post" id="budgetForm">
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="The total government budget you want to allocate across sectors (e.g., 2,000,000,000,000 for 2T EGP)">Total Budget (B):</label>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control number-format" name="Budget" required inputmode="numeric" autocomplete="off" value="@(ViewBag.BudgetForm != null ? ((double)ViewBag.BudgetForm.Budget).ToString("N0") : "")" />
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="The country's total national debt (e.g., 7,410,000,000,000 for 7.41T EGP)">Total Debt (D):</label>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control number-format" name="Debt" required inputmode="numeric" autocomplete="off" value="@(ViewBag.BudgetForm != null ? ((double)ViewBag.BudgetForm.Debt).ToString("N0") : "")" />
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="Gross Domestic Product (GDP) for your country (e.g., 7,730,000,000,000 for 7.73T EGP)">GDP:</label>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control number-format" name="GDP" required inputmode="numeric" autocomplete="off" value="@(ViewBag.BudgetForm != null ? ((double)ViewBag.BudgetForm.GDP).ToString("N0") : "")" />
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="Expected government revenue (e.g., 1,550,000,000,000 for 1.55T EGP)">Revenue (R):</label>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control number-format" name="Revenue" required inputmode="numeric" autocomplete="off" value="@(ViewBag.BudgetForm != null ? ((double)ViewBag.BudgetForm.Revenue).ToString("N0") : "")" />
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="How much importance to place on reducing debt in the optimization (default 1, higher = more focus on debt)">Debt Importance (λ):</label>
+                        <div class="col-sm-8">
+                            <input type="number" class="form-control" name="Lambda" step="any" value="@(ViewBag.BudgetForm != null ? (double)ViewBag.BudgetForm.Lambda : 1)" min="0" max="10" />
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="Check if you want the optimizer to prioritize reducing debt as part of the objective.">Reduce Debt?</label>
+                        <div class="col-sm-8">
+                            <input type="checkbox" class="form-check-input" name="ReduceDebt" value="true" @(ViewBag.BudgetForm != null && (bool)ViewBag.BudgetForm.ReduceDebt ? "checked" : "") />
+                        </div>
+                    </div>
+                    <hr />
+                    <h5 class="mb-3">Sector Weights (%)</h5>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="Percent of budget for Education (must be between 10% and 30%)">Education (10–30%)</label>
+                        <div class="col-sm-8">
+                            <input type="range" class="form-range" name="Education" min="10" max="30" step="0.1" required value="@(ViewBag.BudgetForm != null ? (double)ViewBag.BudgetForm.Education : 10)" oninput="document.getElementById('edVal').innerText = this.value + '%'" />
+                            <span id="edVal">@(ViewBag.BudgetForm != null ? (double)ViewBag.BudgetForm.Education : 10)%</span>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="Percent of budget for Infrastructure (must be between 15% and 35%)">Infrastructure (15–35%)</label>
+                        <div class="col-sm-8">
+                            <input type="range" class="form-range" name="Infrastructure" min="15" max="35" step="0.1" required value="@(ViewBag.BudgetForm != null ? (double)ViewBag.BudgetForm.Infrastructure : 15)" oninput="document.getElementById('infVal').innerText = this.value + '%'" />
+                            <span id="infVal">@(ViewBag.BudgetForm != null ? (double)ViewBag.BudgetForm.Infrastructure : 15)%</span>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="Percent of budget for Health (must be between 10% and 25%)">Health (10–25%)</label>
+                        <div class="col-sm-8">
+                            <input type="range" class="form-range" name="Health" min="10" max="25" step="0.1" required value="@(ViewBag.BudgetForm != null ? (double)ViewBag.BudgetForm.Health : 10)" oninput="document.getElementById('healthVal').innerText = this.value + '%'" />
+                            <span id="healthVal">@(ViewBag.BudgetForm != null ? (double)ViewBag.BudgetForm.Health : 10)%</span>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="Percent of budget for Government & Admin (must be between 10% and 25%)">Government & Admin (10–25%)</label>
+                        <div class="col-sm-8">
+                            <input type="range" class="form-range" name="GovAdmin" min="10" max="25" step="0.1" required value="@(ViewBag.BudgetForm != null ? (double)ViewBag.BudgetForm.GovAdmin : 10)" oninput="document.getElementById('govVal').innerText = this.value + '%'" />
+                            <span id="govVal">@(ViewBag.BudgetForm != null ? (double)ViewBag.BudgetForm.GovAdmin : 10)%</span>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="Percent of budget for Other sectors (must be between 10% and 30%)">Other (10–30%)</label>
+                        <div class="col-sm-8">
+                            <input type="range" class="form-range" name="Other" min="10" max="30" step="0.1" required value="@(ViewBag.BudgetForm != null ? (double)ViewBag.BudgetForm.Other : 10)" oninput="document.getElementById('otherVal').innerText = this.value + '%'" />
+                            <span id="otherVal">@(ViewBag.BudgetForm != null ? (double)ViewBag.BudgetForm.Other : 10)%</span>
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">Optimize Budget</button>
+                    </div>
+                </form>
+                @if (ViewBag.BudgetResult != null)
+                {
+                    <div class="alert alert-info mt-4" id="budgetResult">@Html.Raw(ViewBag.BudgetResult)</div>
+                }
+                @if (ViewBag.BudgetResult != null && ViewBag.BudgetForm != null) {
+                    <div class="mt-4 d-flex flex-column align-items-center" id="allocationPieContainer" style="max-width: 350px; margin: 0 auto;">
+                        <canvas id="allocationPieChart" height="180" width="180"></canvas>
+                        <div class="mt-3 small">
+                            <strong>Sector Allocations:</strong><br />
+                            @{
+                                var total = (double)ViewBag.BudgetForm.Budget;
+                                var allocations = new[] {
+                                    new { Name = "Education", Value = (double)ViewBag.BudgetForm.Education },
+                                    new { Name = "Infrastructure", Value = (double)ViewBag.BudgetForm.Infrastructure },
+                                    new { Name = "Health", Value = (double)ViewBag.BudgetForm.Health },
+                                    new { Name = "Gov/Admin", Value = (double)ViewBag.BudgetForm.GovAdmin },
+                                    new { Name = "Other", Value = (double)ViewBag.BudgetForm.Other }
+                                };
+                                foreach (var alloc in allocations) {
+                                    var amount = total * alloc.Value / 100.0;
+                                    string displayUnit;
+                                    double displayAmount;
+                                    if (ViewBag.BudgetForm.InputUnit == "trillion") {
+                                        if (amount >= 1_000_000_000_000)
+                                        {
+                                            displayAmount = amount / 1_000_000_000_000d;
+                                            displayUnit = "Trillion";
+                                        }
+                                        else if (amount >= 1_000_000_000)
+                                        {
+                                            displayAmount = amount / 1_000_000_000d;
+                                            displayUnit = "Billion";
+                                        }
+                                        else
+                                        {
+                                            displayAmount = amount / 1_000_000d;
+                                            displayUnit = "Million";
+                                        }
+                                    } else {
+                                        if (amount >= 1_000_000_000)
+                                        {
+                                            displayAmount = amount / 1_000_000_000d;
+                                            displayUnit = "Billion";
+                                        }
+                                        else
+                                        {
+                                            displayAmount = amount / 1_000_000d;
+                                            displayUnit = "Million";
+                                        }
+                                    }
+                                    <text>@alloc.Name: @alloc.Value% (@displayAmount.ToString("N2") @displayUnit)<br /></text>
+                                }
+                            }
+                        </div>
+                    </div>
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            var pieLabels = ['Education', 'Infrastructure', 'Health', 'Gov/Admin', 'Other'];
+                            var pieData = [
+                                @(ViewBag.BudgetForm.Education),
+                                @(ViewBag.BudgetForm.Infrastructure),
+                                @(ViewBag.BudgetForm.Health),
+                                @(ViewBag.BudgetForm.GovAdmin),
+                                @(ViewBag.BudgetForm.Other)
+                            ];
+                            var ctx = document.getElementById('allocationPieChart').getContext('2d');
+                            new Chart(ctx, {
+                                type: 'pie',
+                                data: {
+                                    labels: pieLabels,
+                                    datasets: [{
+                                        data: pieData,
+                                        backgroundColor: [
+                                            'rgba(54, 162, 235, 0.7)',
+                                            'rgba(255, 206, 86, 0.7)',
+                                            'rgba(75, 192, 192, 0.7)',
+                                            'rgba(255, 99, 132, 0.7)',
+                                            'rgba(153, 102, 255, 0.7)'
+                                        ]
+                                    }]
+                                },
+                                options: {
+                                    plugins: {
+                                        legend: { position: 'top' },
+                                        title: { display: false }
+                                    }
+                                }
+                            });
+                        });
+                    </script>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    // Enable Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    // Only run tab JS if not already set by server
+    if (!('@(ViewBag.ActiveTab ?? "")' === 'budget')) {
+        if (window.location.hash === '#budget' || document.getElementById('budgetResult')) {
+            var tab = new bootstrap.Tab(document.getElementById('budget-tab'));
+            tab.show();
+            window.location.hash = '#budget';
+        }
+        document.getElementById('budgetForm').addEventListener('submit', function () {
+            setTimeout(function () {
+                var tab = new bootstrap.Tab(document.getElementById('budget-tab'));
+                tab.show();
+                window.location.hash = '#budget';
+            }, 100);
+        });
+    }
+    // Format numbers in BudgetResult
+    function formatNumber(num) {
+        if (!num) return num;
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+    function formatBudgetNumbers() {
+        var el = document.getElementById('budgetResult');
+        if (!el) return;
+        el.innerHTML = el.innerHTML.replace(/(\d{1,3}(?:\d{3})+)(?!\d)/g, function(match) {
+            return formatNumber(match);
+        });
+    }
+    formatBudgetNumbers();
+    // Live number formatting for budget optimizer fields
+    function unformatNumber(str) {
+        return str.replace(/,/g, '');
+    }
+    function formatNumberInput(input) {
+        let val = unformatNumber(input.value);
+        if (!val) return;
+        // Only format if it's a valid number
+        if (!isNaN(val)) {
+            input.value = Number(val).toLocaleString('en-US');
+        }
+    }
+    document.querySelectorAll('.number-format').forEach(function(input) {
+        input.addEventListener('input', function(e) {
+            let cursor = input.selectionStart;
+            let before = input.value.length;
+            formatNumberInput(input);
+            let after = input.value.length;
+            input.setSelectionRange(cursor + (after - before), cursor + (after - before));
+        });
+        // On form submit, unformat numbers so backend receives plain digits
+        input.form && input.form.addEventListener('submit', function() {
+            input.value = unformatNumber(input.value);
+        });
+    });
+</script>

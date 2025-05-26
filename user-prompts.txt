@@ -1,0 +1,19 @@
+1. Create an ASP.NET Core MVC web app that allows users to upload Excel files, display their contents in a table, and (new requirement) add data analytics functionality to the uploaded Excel files. The app should have a modern Bootstrap-based UI.
+
+2. Implement and display data analytics (summary statistics) for uploaded Excel files.
+
+3. Can make the analytics an optional button as in the user will press that button and then the analytics will go through also can you provide charting as well.
+
+4. Now I want to add a whole new tab where the user is able to optimize their budget where they input their current country's budget and the debt and then we start optimizing the budget based on these mathematical equations we also need to display whether or not that budget with their allocation weights will lead to fiscal risk or not. (Detailed prompt with equations, constraints, and workflow.)
+
+5. I want to add tool tips to each field in the budget optimizer to help the user understand what they are inputting also I need an explanation displayed on the front end on why these constraints were added. Another thing when pressing on optimize budget the page navigates to the home page or home tab I want to stay on the same tab.
+
+6. Now can you add a formatter when writing the numbers as in if user inputs 1 million it should be displayed like this 1,000,000.
+
+7. I do not want the formatter to run after optimizing I want it to run while the user is typing.
+
+8. When pressing on the button optimize budget it still takes me to the home page or the home tab.
+
+9. Can you extensively document the application and explain what each function exactly does.
+
+10. Can you extract all the prompts I gave you number them and put them in a text file.
