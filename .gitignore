@@ -6,3 +6,8 @@ obj/Debug/net9.0/ref/SeminarMvcApp.dll
 obj/Debug/net9.0/refint/SeminarMvcApp.dll
 obj/Debug/net9.0/SeminarMvcApp.dll
 obj/Debug/net9.0/SeminarMvcApp.pdb
+.vs/Seminar/FileContentIndex/d5c747b7-1e16-4bcb-8ef0-06316f561c24.vsidx
+*.dll
+*.exe
+*.vsidx
+*.pdb
