@@ -169,22 +169,38 @@ public class HomeController : Controller
     /// <param name="GovAdmin">Sector weight for Government & Admin</param>
     /// <param name="Other">Sector weight for Other</param>
     /// <param name="InputUnit">Unit of the input values (billion/trillion)</param>
-    /// <returns>The Index view with budget optimization results and risk assessment</returns>
-    [HttpPost]
-    public IActionResult OptimizeBudget(double Budget, double Debt, double GDP, double Revenue, double Lambda, bool ReduceDebt,
-        double Education, double Infrastructure, double Health, double GovAdmin, double Other, string InputUnit)
+    /// <param name="DebtSustainabilityRisk">Debt sustainability risk (IMF-style model)</param>
+    [HttpPost("OptimizeBudget")]
+    public IActionResult OptimizeBudget(
+        [FromForm] double Budget,
+        [FromForm] double Debt,
+        [FromForm] double GDP,
+        [FromForm] double Revenue,
+        [FromForm] double Lambda,
+        [FromForm] bool ReduceDebt,
+        [FromForm] double Education,
+        [FromForm] double Infrastructure,
+        [FromForm] double Health,
+        [FromForm] double GovAdmin,
+        [FromForm] double Other,
+        [FromForm] string InputUnit,
+        [FromForm] double? InterestRate = null,
+        [FromForm] double? GDPGrowth = null,
+        [FromForm] double? PrevDebtToGDP = null,
+        [FromForm] double? PrimaryBalance = null)
     {
-        // Convert all main values to trillions for internal calculation
-        double multiplier = 1;
-        if (InputUnit == "billion") multiplier = 1_000_000_000;
-        else if (InputUnit == "trillion") multiplier = 1_000_000_000_000;
+        // Convert all main values to billions for internal calculation
+        double multiplier = 1_000_000_000;
+        InputUnit = "billion";
+        // DEBUG: Log multiplier and InputUnit
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] InputUnit: {InputUnit}, Multiplier: {multiplier}");
         Budget *= multiplier;
         Debt *= multiplier;
         GDP *= multiplier;
         Revenue *= multiplier;
 
         // Normalize sector weights so they sum to 1
-        double totalWeight = Education + Infrastructure + Health + GovAdmin + Other;
+        double totalWeight = Education+ Infrastructure + Health + GovAdmin + Other;
         double w1 = Education / totalWeight;
         double w2 = Infrastructure / totalWeight;
         double w3 = Health / totalWeight;
@@ -204,6 +220,25 @@ public class HomeController : Controller
         // Fiscal risk score for display
         double fiscalRiskScore = (Budget - Revenue) / Budget + (ReduceDebt ? Lambda * (Debt / GDP) : 0);
 
+        // Calculate Primary Balance (PBₜ) as (Revenue - Spending) / GDP
+        // Spending is the total budget (Budget)
+        double primaryBalance = GDP != 0 ? (Revenue - Budget) / GDP : 0;
+
+        
+
+        // Debt Sustainability Risk (IMF-style)
+        double? debtSustainabilityRisk = null;
+        if (InterestRate.HasValue && GDPGrowth.HasValue && PrevDebtToGDP.HasValue)
+        {
+            // Use calculated PBₜ if not provided
+            double PBt = primaryBalance;
+            if (PrimaryBalance.HasValue) PBt = PrimaryBalance.Value;
+            double r = InterestRate.Value;
+            double g = GDPGrowth.Value;
+            double Dt_1 = PrevDebtToGDP.Value;
+            debtSustainabilityRisk = ((r - g) / (1 + g)) * Dt_1 - PBt;
+        }
+
         // Risk assessment based on fiscal risk score
         string riskLevel = fiscalRiskScore > 1.5 ? "<span class='text-danger fw-bold'>High Fiscal Risk</span>" :
             (fiscalRiskScore > 1.0 ? "<span class='text-warning fw-bold'>Moderate Fiscal Risk</span>" :
@@ -215,9 +250,13 @@ public class HomeController : Controller
             <ul>
                 <li>Normalized Weights: Education={w1:P1}, Infrastructure={w2:P1}, Health={w3:P1}, Gov/Admin={w4:P1}, Other={w5:P1}</li>
                 <li>Social Return Score: {socialReturn:N3}</li>
-                <li>Fiscal Risk Score: {fiscalRiskScore:N3} ({riskLevel})</li>
-            </ul>
-        ";
+                <li>Fiscal Risk Score: {fiscalRiskScore:N3} ({riskLevel})</li>";
+        result += $"<li>Primary Balance (PBₜ): {primaryBalance:N3}</li>";
+        if (debtSustainabilityRisk.HasValue)
+        {
+            result += $"<li>Debt Sustainability Risk (ΔDₜ): {debtSustainabilityRisk.Value:N3}</li>";
+        }
+        result += "</ul>";
         ViewBag.BudgetResult = result;
         ViewBag.ActiveTab = "budget";
         ViewBag.BudgetForm = new {
@@ -232,7 +271,11 @@ public class HomeController : Controller
             Health,
             GovAdmin,
             Other,
-            InputUnit
+            InputUnit,
+            InterestRate,
+            GDPGrowth,
+            PrevDebtToGDP,
+            PrimaryBalance = primaryBalance // always set calculated PBₜ
         };
         return View("Index");
     }

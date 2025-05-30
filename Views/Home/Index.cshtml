@@ -158,19 +158,11 @@
                 <div class="mb-3 row">
                     <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="Choose the unit for your input values (e.g., 1 Billion = 1,000,000,000)">Input Unit:</label>
                     <div class="col-sm-8">
-                        <select class="form-select" name="InputUnit" id="InputUnit">
-                            @{
-                                var inputUnit = ViewBag.BudgetForm != null && ViewBag.BudgetForm.InputUnit != null ? (string)ViewBag.BudgetForm.InputUnit : "billion";
-                            }
-                            <option value="billion" selected="@(inputUnit == "billion" ? "selected" : null)">Billion</option>
-                            <option value="trillion" selected="@(inputUnit == "trillion" ? "selected" : null)">Trillion</option>
-                        </select>
+                     
+                        <input class="form-control number-format" name="InputUnit" value="billion" disabled/>
                     </div>
                 </div>
-                <div class="alert alert-secondary mb-4">
-                    <strong>Why these constraints?</strong><br />
-                    The sector allocation constraints reflect typical policy priorities and historical spending patterns. They ensure a balanced budget that supports essential services (like education and health), infrastructure, and government operations, while preventing over- or under-investment in any one area. These ranges are based on international best practices and local economic realities.
-                </div>
+               
                 <form asp-action="OptimizeBudget" method="post" id="budgetForm">
                     <div class="mb-3 row">
                         <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="The total government budget you want to allocate across sectors (e.g., 2,000,000,000,000 for 2T EGP)">Total Budget (B):</label>
@@ -196,6 +188,7 @@
                             <input type="text" class="form-control number-format" name="Revenue" required inputmode="numeric" autocomplete="off" value="@(ViewBag.BudgetForm != null ? ((double)ViewBag.BudgetForm.Revenue).ToString("N0") : "")" />
                         </div>
                     </div>
+                    
                     <div class="mb-3 row">
                         <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="How much importance to place on reducing debt in the optimization (default 1, higher = more focus on debt)">Debt Importance (λ):</label>
                         <div class="col-sm-8">
@@ -210,6 +203,10 @@
                     </div>
                     <hr />
                     <h5 class="mb-3">Sector Weights (%)</h5>
+                    <div class="alert alert-secondary mb-4">
+                        <strong>Why these constraints?</strong><br />
+                        The sector allocation constraints reflect typical policy priorities and historical spending patterns. They ensure a balanced budget that supports essential services (like education and health), infrastructure, and government operations, while preventing over- or under-investment in any one area. These ranges are based on international best practices and local economic realities.
+                    </div>
                     <div class="mb-3 row">
                         <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="Percent of budget for Education (must be between 10% and 30%)">Education (10–30%)</label>
                         <div class="col-sm-8">
@@ -245,6 +242,32 @@
                             <span id="otherVal">@(ViewBag.BudgetForm != null ? (double)ViewBag.BudgetForm.Other : 10)%</span>
                         </div>
                     </div>
+                    <hr />
+                    <h5 class="mb-3">Debt Sustainability Risk Model (IMF-style)</h5>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="1️⃣ What it is: The average interest rate the government pays on its existing debt.\n\n🏦 Includes interest on treasury bonds, loans, and external debt.\n\n📊 Example: If Egypt pays ~12% interest on debt → r = 0.12\n\n📥 You can source this from Central Bank or IMF data.\n\nHigh r = faster debt growth (more expensive to borrow)">Interest Rate (r):</label>
+                        <div class="col-sm-8">
+                            <input type="number" class="form-control" name="InterestRate" step="any" min="0" max="1" value="@(ViewBag.BudgetForm != null && ViewBag.BudgetForm.InterestRate != null ? ((double)ViewBag.BudgetForm.InterestRate).ToString("N3") : "0.13")" />
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="2️⃣ What it is: The annual real growth rate of the economy (after inflation).\n\n📊 Example: If Egypt’s economy grows by 4.5% a year → g = 0.045\n\n💡 Faster GDP growth helps reduce debt burden (denominator grows)\n\nIf r > g → debt grows unsustainably">GDP Growth Rate (g):</label>
+                        <div class="col-sm-8">
+                            <input type="number" class="form-control" name="GDPGrowth" step="any" min="-1" max="1" value="@(ViewBag.BudgetForm != null && ViewBag.BudgetForm.GDPGrowth != null ? ((double)ViewBag.BudgetForm.GDPGrowth).ToString("N3") : "0.04")" />
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="3️⃣ What it is: The debt as a % of GDP from the previous year\n\n📊 Example: If 2022 had debt at 95% of GDP → Dₜ₋₁ = 0.95\n\n📥 Comes from your debt dataset (you already used it)\n\nThis acts like a base value — high past debt worsens growth effects">Prev. Debt-to-GDP (Dₜ₋₁):</label>
+                        <div class="col-sm-8">
+                            <input type="number" class="form-control" name="PrevDebtToGDP" step="any" min="0" max="10" value="@(ViewBag.BudgetForm != null && ViewBag.BudgetForm.PrevDebtToGDP != null ? ((double)ViewBag.BudgetForm.PrevDebtToGDP).ToString("N3") : "0.95")" />
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label" data-bs-toggle="tooltip" title="4️⃣ What it is: Government’s budget balance excluding interest payments, as % of GDP\n\nPBₜ = (Revenue − Spending) / GDP\n\n📊 Example: Revenue: 1.5 trillion EGP, Spending: 2.0 trillion EGP\n\nIf PBₜ is negative, the government is running a primary deficit. If positive, a primary surplus.">Primary Balance (PBₜ):</label>
+                        <div class="col-sm-8">
+                            <input type="number" class="form-control" name="PrimaryBalance" step="any" min="-10" max="10" value="@(ViewBag.BudgetForm != null && ViewBag.BudgetForm.PrimaryBalance != null ? ((double)ViewBag.BudgetForm.PrimaryBalance).ToString("N3") : "")" readonly />
+                        </div>
+                    </div>
                     <div class="d-grid gap-2 mt-4">
                         <button type="submit" class="btn btn-primary btn-lg">Optimize Budget</button>
                     </div>
@@ -259,7 +282,7 @@
                         <div class="mt-3 small">
                             <strong>Sector Allocations:</strong><br />
                             @{
-                                var total = (double)ViewBag.BudgetForm.Budget;
+                                var total = (double)ViewBag.BudgetForm.Budget * 1_000_000_000;
                                 var allocations = new[] {
                                     new { Name = "Education", Value = (double)ViewBag.BudgetForm.Education },
                                     new { Name = "Infrastructure", Value = (double)ViewBag.BudgetForm.Infrastructure },
@@ -268,7 +291,7 @@
                                     new { Name = "Other", Value = (double)ViewBag.BudgetForm.Other }
                                 };
                                 foreach (var alloc in allocations) {
-                                    var amount = total * alloc.Value / 100.0;
+                                    double amount = total * alloc.Value / 100.0;
                                     string displayUnit;
                                     double displayAmount;
                                     if (ViewBag.BudgetForm.InputUnit == "trillion") {
@@ -300,6 +323,47 @@
                                         }
                                     }
                                     <text>@alloc.Name: @alloc.Value% (@displayAmount.ToString("N2") @displayUnit)<br /></text>
+                                }
+                            }
+                        </div>
+                        <div class="mt-2 small text-muted">
+                            <strong>Pie Chart Values:</strong><br />
+                            @{
+                                int idx = 0;
+                                foreach (var alloc in allocations) {
+                                    double amount = total * alloc.Value / 100.0;
+                                    string displayUnit;
+                                    double displayAmount;
+                                    if (ViewBag.BudgetForm.InputUnit == "trillion") {
+                                        if (amount >= 1_000_000_000_000)
+                                        {
+                                            displayAmount = amount / 1_000_000_000_000d;
+                                            displayUnit = "Trillion";
+                                        }
+                                        else if (amount >= 1_000_000_000)
+                                        {
+                                            displayAmount = amount / 1_000_000_000d;
+                                            displayUnit = "Billion";
+                                        }
+                                        else
+                                        {
+                                            displayAmount = amount / 1_000_000d;
+                                            displayUnit = "Million";
+                                        }
+                                    } else {
+                                        if (amount >= 1_000_000_000)
+                                        {
+                                            displayAmount = amount / 1_000_000_000d;
+                                            displayUnit = "Billion";
+                                        }
+                                        else
+                                        {
+                                            displayAmount = amount / 1_000_000d;
+                                            displayUnit = "Million";
+                                        }
+                                    }
+                                    <text>@alloc.Name: @displayAmount.ToString("N2") @displayUnit</text>@(idx < allocations.Length - 1 ? ", " : "")
+                                    idx++;
                                 }
                             }
                         </div>
