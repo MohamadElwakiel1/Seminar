@@ -36,7 +36,7 @@
               "RelativeDocumentMoniker": "Views\\Home\\Index.cshtml",
               "ToolTip": "D:\\Seminar\\Views\\Home\\Index.cshtml",
               "RelativeToolTip": "Views\\Home\\Index.cshtml",
-              "ViewState": "AgIAAJ8AAAAAAAAAAAAAAMQBAAAZAAAAAAAAAA==",
+              "ViewState": "AgIAACsBAAAAAAAAAAAvwEkBAAAgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
               "WhenOpened": "2025-05-30T12:55:05.368Z",
               "EditorCaption": ""
@@ -49,10 +49,9 @@
               "RelativeDocumentMoniker": "Controllers\\HomeController.cs",
               "ToolTip": "D:\\Seminar\\Controllers\\HomeController.cs",
               "RelativeToolTip": "Controllers\\HomeController.cs",
-              "ViewState": "AgIAALwAAAAAAAAAAAAvwNMAAAAIAAAAAAAAAA==",
+              "ViewState": "AgIAANoAAAAAAAAAAAAvwOYAAABHAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-30T12:47:57.429Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-30T12:47:57.429Z"
             }
           ]
         }

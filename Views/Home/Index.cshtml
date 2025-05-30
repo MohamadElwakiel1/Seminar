@@ -283,17 +283,21 @@
                             <strong>Sector Allocations:</strong><br />
                             @{
                                 var total = (double)ViewBag.BudgetForm.Budget * 1_000_000_000;
-                                var allocations = new[] {
-                                    new { Name = "Education", Value = (double)ViewBag.BudgetForm.Education },
-                                    new { Name = "Infrastructure", Value = (double)ViewBag.BudgetForm.Infrastructure },
-                                    new { Name = "Health", Value = (double)ViewBag.BudgetForm.Health },
-                                    new { Name = "Gov/Admin", Value = (double)ViewBag.BudgetForm.GovAdmin },
-                                    new { Name = "Other", Value = (double)ViewBag.BudgetForm.Other }
+                                // Use normalized weights for display
+                                var norm = new[] {
+                                    new { Name = "Education", Value = (double)ViewBag.BudgetForm.NormalizedEducation },
+                                    new { Name = "Infrastructure", Value = (double)ViewBag.BudgetForm.NormalizedInfrastructure },
+                                    new { Name = "Health", Value = (double)ViewBag.BudgetForm.NormalizedHealth },
+                                    new { Name = "Gov/Admin", Value = (double)ViewBag.BudgetForm.NormalizedGovAdmin },
+                                    new { Name = "Other", Value = (double)ViewBag.BudgetForm.NormalizedOther }
                                 };
-                                foreach (var alloc in allocations) {
-                                    double amount = total * alloc.Value / 100.0;
+                                double spent = 0;
+                                foreach (var alloc in norm) {
+                                    double amount = total * alloc.Value;
+                                    spent += amount;
                                     string displayUnit;
                                     double displayAmount;
+                                    double percent = alloc.Value * 100.0;
                                     if (ViewBag.BudgetForm.InputUnit == "trillion") {
                                         if (amount >= 1_000_000_000_000)
                                         {
@@ -322,62 +326,71 @@
                                             displayUnit = "Million";
                                         }
                                     }
-                                    <text>@alloc.Name: @alloc.Value% (@displayAmount.ToString("N2") @displayUnit)<br /></text>
+                                    <text>@alloc.Name: @percent.ToString("N2")% (@displayAmount.ToString("N2") @displayUnit)<br /></text>
                                 }
+                                double budgetRemaining = total - spent;
+                                string spentUnit = spent >= 1_000_000_000 ? "Billion" : "Million";
+                                double spentDisplay = spent >= 1_000_000_000 ? spent / 1_000_000_000d : spent / 1_000_000d;
+                                string remainUnit = budgetRemaining >= 1_000_000_000 ? "Billion" : "Million";
+                                double remainDisplay = budgetRemaining >= 1_000_000_000 ? budgetRemaining / 1_000_000_000d : budgetRemaining / 1_000_000d;
                             }
                         </div>
-                        <div class="mt-2 small text-muted">
-                            <strong>Pie Chart Values:</strong><br />
-                            @{
-                                int idx = 0;
-                                foreach (var alloc in allocations) {
-                                    double amount = total * alloc.Value / 100.0;
-                                    string displayUnit;
-                                    double displayAmount;
-                                    if (ViewBag.BudgetForm.InputUnit == "trillion") {
-                                        if (amount >= 1_000_000_000_000)
-                                        {
-                                            displayAmount = amount / 1_000_000_000_000d;
-                                            displayUnit = "Trillion";
-                                        }
-                                        else if (amount >= 1_000_000_000)
-                                        {
-                                            displayAmount = amount / 1_000_000_000d;
-                                            displayUnit = "Billion";
-                                        }
-                                        else
-                                        {
-                                            displayAmount = amount / 1_000_000d;
-                                            displayUnit = "Million";
-                                        }
-                                    } else {
-                                        if (amount >= 1_000_000_000)
-                                        {
-                                            displayAmount = amount / 1_000_000_000d;
-                                            displayUnit = "Billion";
-                                        }
-                                        else
-                                        {
-                                            displayAmount = amount / 1_000_000d;
-                                            displayUnit = "Million";
-                                        }
-                                    }
-                                    <text>@alloc.Name: @displayAmount.ToString("N2") @displayUnit</text>@(idx < allocations.Length - 1 ? ", " : "")
-                                    idx++;
-                                }
-                            }
+                        <div class="mt-2 small text-success">
+                            <strong>Actual Spent:</strong> @spentDisplay.ToString("N2") @spentUnit<br />
+                            <strong>Budget Remaining:</strong> @remainDisplay.ToString("N2") @remainUnit
                         </div>
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
+                       
                     </div>
                     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                     <script>
                         document.addEventListener('DOMContentLoaded', function() {
                             var pieLabels = ['Education', 'Infrastructure', 'Health', 'Gov/Admin', 'Other'];
                             var pieData = [
-                                @(ViewBag.BudgetForm.Education),
-                                @(ViewBag.BudgetForm.Infrastructure),
-                                @(ViewBag.BudgetForm.Health),
-                                @(ViewBag.BudgetForm.GovAdmin),
-                                @(ViewBag.BudgetForm.Other)
+                                @(ViewBag.BudgetForm.NormalizedEducation),
+                                @(ViewBag.BudgetForm.NormalizedInfrastructure),
+                                @(ViewBag.BudgetForm.NormalizedHealth),
+                                @(ViewBag.BudgetForm.NormalizedGovAdmin),
+                                @(ViewBag.BudgetForm.NormalizedOther)
                             ];
                             var ctx = document.getElementById('allocationPieChart').getContext('2d');
                             new Chart(ctx, {

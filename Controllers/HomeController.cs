@@ -220,11 +220,15 @@ public class HomeController : Controller
         // Fiscal risk score for display
         double fiscalRiskScore = (Budget - Revenue) / Budget + (ReduceDebt ? Lambda * (Debt / GDP) : 0);
 
+        // Calculate total spending from budget and allocation weights
+        double spent = 0;
+        spent += Budget * (Education / totalWeight);
+        spent += Budget * (Infrastructure / totalWeight);
+        spent += Budget * (Health / totalWeight);
+        spent += Budget * (GovAdmin / totalWeight);
+        spent += Budget * (Other / totalWeight);
         // Calculate Primary Balance (PBₜ) as (Revenue - Spending) / GDP
-        // Spending is the total budget (Budget)
-        double primaryBalance = GDP != 0 ? (Revenue - Budget) / GDP : 0;
-
-        
+        double primaryBalance = GDP != 0 ? (Revenue - spent) / GDP : 0;
 
         // Debt Sustainability Risk (IMF-style)
         double? debtSustainabilityRisk = null;
@@ -248,13 +252,33 @@ public class HomeController : Controller
         string result = $@"
             <h5>Optimization Results</h5>
             <ul>
-                <li>Normalized Weights: Education={w1:P1}, Infrastructure={w2:P1}, Health={w3:P1}, Gov/Admin={w4:P1}, Other={w5:P1}</li>
+                <li>Normalized Weights: Education={(w1 * 100.0):N2}%, Infrastructure={(w2 * 100.0):N2}%, Health={(w3 * 100.0):N2}%, Gov/Admin={(w4 * 100.0):N2}%, Other={(w5 * 100.0):N2}%</li>
                 <li>Social Return Score: {socialReturn:N3}</li>
                 <li>Fiscal Risk Score: {fiscalRiskScore:N3} ({riskLevel})</li>";
         result += $"<li>Primary Balance (PBₜ): {primaryBalance:N3}</li>";
         if (debtSustainabilityRisk.HasValue)
         {
-            result += $"<li>Debt Sustainability Risk (ΔDₜ): {debtSustainabilityRisk.Value:N3}</li>";
+            // Color indicator and interpretation for ΔDₜ
+            string dsrClass, dsrIcon, dsrText;
+            if (debtSustainabilityRisk.Value <= 0)
+            {
+                dsrClass = "<span class='text-success fw-bold'>🟢</span>";
+                dsrIcon = "🟢";
+                dsrText = "Debt is stable or shrinking";
+            }
+            else if (debtSustainabilityRisk.Value > 0 && debtSustainabilityRisk.Value <= 0.03)
+            {
+                dsrClass = "<span class='text-warning fw-bold'>🟡</span>";
+                dsrIcon = "🟡";
+                dsrText = "Slight upward pressure";
+            }
+            else
+            {
+                dsrClass = "<span class='text-danger fw-bold'>🔴</span>";
+                dsrIcon = "🔴";
+                dsrText = "Rapid debt accumulation risk";
+            }
+            result += $"<li>Debt Sustainability Risk (ΔDₜ): {debtSustainabilityRisk.Value:P2} {dsrClass} - {dsrText}</li>";
         }
         result += "</ul>";
         ViewBag.BudgetResult = result;
@@ -264,6 +288,7 @@ public class HomeController : Controller
             Debt = Debt / multiplier,
             GDP = GDP / multiplier,
             Revenue = Revenue / multiplier,
+            Spending = spent / multiplier,
             Lambda,
             ReduceDebt,
             Education,
@@ -275,7 +300,13 @@ public class HomeController : Controller
             InterestRate,
             GDPGrowth,
             PrevDebtToGDP,
-            PrimaryBalance = primaryBalance // always set calculated PBₜ
+            PrimaryBalance = primaryBalance, // always set calculated PBₜ
+            NormalizedEducation = w1,
+            NormalizedInfrastructure = w2,
+            NormalizedHealth = w3,
+            NormalizedGovAdmin = w4,
+            NormalizedOther = w5,
+            DebtSustainabilityRisk = debtSustainabilityRisk
         };
         return View("Index");
     }
